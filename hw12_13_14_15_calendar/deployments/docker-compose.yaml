@@ -1,1 +1,23 @@
-version: "3"
+version: "3.9"
+services:
+  postgres:
+    container_name: db_otus_calendar
+    image: postgres
+    environment:
+      POSTGRES_DB: "otus_calendar"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "qwerty"
+    ports:
+      - "10905:5432"
+    restart: unless-stopped
+    volumes:
+      - ./../data:/var/lib/postgresql/data
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      - RABBITMQ_DEFAULT_VHOST=local
+    volumes:
+      - ./../data/rabbitmq_data:/data'

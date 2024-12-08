@@ -17,6 +17,7 @@ type Params struct {
 	Limit      int
 	StartAtGEq time.Time `db:"start_at_g_eq"`
 	StartAtLEq time.Time `db:"start_at_l_eq"`
+	IsSent     *bool     `db:"is_sent"`
 }
 
 func (p *Params) SetStartAtLEqFromDuration(d Duration) *Params {
@@ -49,8 +50,10 @@ func (p *Params) SetDefaultStartAtLEq() *Params {
 type IStorage interface {
 	Add(context.Context, Event) (uint64, error)
 	Update(context.Context, Event) error
-	Delete(ctx context.Context, eventID uint64) error
+	Delete(ctx context.Context, eventIDs []uint64) error
 	List(context.Context, Params) ([]Event, error)
+	ListToSend(ctx context.Context) ([]Event, error)
+	SetSent(ctx context.Context, eventIDs []uint64) error
 	Connect(context.Context) error
 	Close(context.Context) error
 	Migrate() error

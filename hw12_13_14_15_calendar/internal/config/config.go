@@ -4,8 +4,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/vrnvgasu/home_work/hw12_13_14_15_calendar/internal/logger"
 	"gopkg.in/yaml.v3"
+
+	"github.com/vrnvgasu/home_work/hw12_13_14_15_calendar/internal/logger"
 )
 
 type DBType string
@@ -26,6 +27,8 @@ type Config struct {
 	DBType     `yaml:"dbType"`
 	Server     ServerConf     `yaml:"server"`
 	GRPSServer GRPSServerConf `yaml:"grpsServer"`
+	Rabbitmq   `yaml:"rabbitmq"`
+	Scheduler  `yaml:"scheduler"`
 }
 
 type ServerConf struct {
@@ -45,6 +48,20 @@ type LoggerConf struct {
 type PSQLConfig struct {
 	DSN       string `yaml:"dsn"`
 	Migration string `json:"migration"`
+}
+
+type Rabbitmq struct {
+	URI          string `yaml:"uri"`
+	ExchangeName string `yaml:"exchangeName"`
+	ExchangeType string `yaml:"exchangeType"`
+	RoutingKey   string `yaml:"routingKey"`
+	Queue        string `yaml:"queue"`
+	ConsumerTag  string `yaml:"consumerTag"`
+}
+
+type Scheduler struct {
+	Ticker         int64 `yaml:"ticker"`
+	EventsLifeTime int64 `yaml:"eventsLifeTime"`
 }
 
 func NewConfig(configFile string) *Config {

@@ -1,0 +1,10 @@
+logger:
+  level: DEBUG
+
+rabbitmq:
+  uri: amqp://guest:guest@127.0.0.1:5672/local
+  exchangeName: event-exchange
+  exchangeType: direct
+  routingKey: event-key
+  queue: event-queue
+  consumerTag: event-tag

@@ -8,10 +8,49 @@ import (
 
 	_ "github.com/jackc/pgx/stdlib" // postgresql provider
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/pressly/goose/v3"
+
 	"github.com/vrnvgasu/home_work/hw12_13_14_15_calendar/internal/config"
 	"github.com/vrnvgasu/home_work/hw12_13_14_15_calendar/internal/storage"
 )
+
+type listQueryBuilder struct {
+	q            string
+	isWhereExist bool
+}
+
+func newListQueryBuilder() *listQueryBuilder {
+	return &listQueryBuilder{
+		q: "select * from event",
+	}
+}
+
+func (l *listQueryBuilder) where(condition string) {
+	if !l.isWhereExist {
+		l.q += " where "
+	} else {
+		l.q += " and "
+	}
+
+	l.q += condition + " "
+
+	l.isWhereExist = true
+}
+
+func (l *listQueryBuilder) orderBy(condition string) {
+	l.q += " order by " + condition + " "
+}
+
+func (l *listQueryBuilder) limit(limit int) {
+	if limit > 0 {
+		l.q += fmt.Sprintf(" limit %d ", limit)
+	}
+}
+
+func (l *listQueryBuilder) build() string {
+	return l.q
+}
 
 type Storage struct {
 	db *sqlx.DB
@@ -49,9 +88,9 @@ func (s *Storage) Update(ctx context.Context, e storage.Event) error {
 	return nil
 }
 
-func (s *Storage) Delete(ctx context.Context, eventID uint64) error {
-	q := `delete from event where id = $1`
-	_, err := s.db.ExecContext(ctx, q, eventID)
+func (s *Storage) Delete(ctx context.Context, eventIDs []uint64) error {
+	q := `delete from event where id = any($1)`
+	_, err := s.db.ExecContext(ctx, q, pq.Array(eventIDs))
 	if err != nil {
 		return fmt.Errorf("delete event error: %w", err)
 	}
@@ -60,32 +99,30 @@ func (s *Storage) Delete(ctx context.Context, eventID uint64) error {
 }
 
 func (s *Storage) List(ctx context.Context, params storage.Params) ([]storage.Event, error) {
-	q := `select * from event`
+	qBuilder := newListQueryBuilder()
 
 	if !params.StartAtGEq.IsZero() {
-		q += ` where start_at >= :start_at_g_eq `
+		qBuilder.where("start_at >= :start_at_g_eq")
 	}
 
 	if !params.StartAtLEq.IsZero() {
-		if !params.StartAtGEq.IsZero() {
-			q += ` and `
-		}
-		q += ` start_at <= :start_at_l_eq `
+		qBuilder.where("start_at <= :start_at_l_eq")
 	}
 
-	q += " order by start_at"
-
-	if params.Limit > 0 {
-		q += fmt.Sprintf(" limit %d", params.Limit)
+	if params.IsSent != nil {
+		qBuilder.where("is_sent = :is_sent")
 	}
 
-	rows, err := s.db.NamedQueryContext(ctx, q, params)
+	qBuilder.orderBy("start_at")
+	qBuilder.limit(params.Limit)
+
+	rows, err := s.db.NamedQueryContext(ctx, qBuilder.build(), params)
 	if err != nil {
 		return nil, fmt.Errorf("list event error: %w", err)
 	}
 	defer rows.Close()
 
-	result := []storage.Event{}
+	result := make([]storage.Event, 0)
 	for rows.Next() {
 		e := storage.Event{}
 		if err = rows.StructScan(&e); err != nil {
@@ -96,6 +133,47 @@ func (s *Storage) List(ctx context.Context, params storage.Params) ([]storage.Ev
 	}
 
 	return result, nil
+}
+
+func (s *Storage) ListToSend(ctx context.Context) ([]storage.Event, error) {
+	q := `
+		select *
+		from event e
+		where e.start_at <= now() - e.send_before * interval '1 sec'
+		and e.is_sent = false
+		`
+
+	rows, err := s.db.NamedQueryContext(ctx, q, struct{}{})
+	if err != nil {
+		return nil, fmt.Errorf("ListToSend event error: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]storage.Event, 0)
+	for rows.Next() {
+		e := storage.Event{}
+		if err = rows.StructScan(&e); err != nil {
+			return nil, fmt.Errorf("ListToSend event scan error: %w", err)
+		}
+
+		result = append(result, e)
+	}
+
+	return result, nil
+}
+
+func (s *Storage) SetSent(ctx context.Context, eventIDs []uint64) error {
+	q := `
+		update event
+		set is_sent = true
+		where id = any($1)
+		`
+	_, err := s.db.ExecContext(ctx, q, pq.Array(eventIDs))
+	if err != nil {
+		return fmt.Errorf("SetSent event error: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Storage) Connect(_ context.Context) error {

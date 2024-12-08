@@ -1,0 +1,18 @@
+logger:
+  level: DEBUG
+
+psql:
+  dsn: "host=localhost port=10905 user=user password=qwerty dbname=otus_calendar sslmode=disable"
+  migration: migrations
+
+dbType: sql
+
+rabbitmq:
+  uri: amqp://guest:guest@127.0.0.1:5672/local
+  exchangeName: event-exchange
+  exchangeType: direct
+  routingKey: event-key
+
+scheduler:
+  ticker: 60
+  eventsLifeTime: 31_536_000

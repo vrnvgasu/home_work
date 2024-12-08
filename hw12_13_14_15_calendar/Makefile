@@ -1,26 +1,39 @@
-BIN := "./bin/calendar"
-DOCKER_IMG="calendar:develop"
+BIN_calendar := "./bin/calendar"
+DOCKER_IMG_calendar="calendar:develop"
+
+BIN_calendar_scheduler := "./bin/calendar_scheduler"
+DOCKER_IMG_calendar_scheduler="calendar:develop"
+
+BIN_calendar_sender := "./bin/calendar_sender"
+DOCKER_IMG_calendar_sender="calendar:develop"
 
 GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
 
 build:
-	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
+	go build -v -o $(BIN_calendar) -ldflags "$(LDFLAGS)" ./cmd/calendar
+	go build -v -o $(BIN_calendar_scheduler) -ldflags "$(LDFLAGS)" ./cmd/calendar_scheduler
+	go build -v -o $(BIN_calendar_sender) -ldflags "$(LDFLAGS)" ./cmd/calendar_sender
+
+run-docker:
+	docker compose --project-directory ./deployments up
 
 run: build
-	$(BIN) -config ./configs/config-dev.yml
+	$(BIN_calendar) -config ./configs/calendar_config-dev.yml
 
 build-img:
 	docker build \
 		--build-arg=LDFLAGS="$(LDFLAGS)" \
-		-t $(DOCKER_IMG) \
+		-t $(DOCKER_IMG_calendar) \
 		-f build/Dockerfile .
 
 run-img: build-img
-	docker run $(DOCKER_IMG)
+	docker run $(DOCKER_IMG_calendar)
 
 version: build
-	$(BIN) version
+	$(BIN_calendar) version
+	$(BIN_calendar_scheduler) version
+	$(BIN_calendar_sender) version
 
 test:
 	go test -race ./internal/... ./pkg/... -v

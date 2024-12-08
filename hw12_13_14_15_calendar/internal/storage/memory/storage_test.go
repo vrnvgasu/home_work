@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/vrnvgasu/home_work/hw12_13_14_15_calendar/internal/storage"
 )
 
@@ -91,19 +92,50 @@ func TestStorage(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		err := s.Delete(context.TODO(), 1)
+		err := s.Delete(context.TODO(), []uint64{1})
 		require.NoError(t, err)
 		list, err := s.List(context.TODO(), storage.Params{})
 		require.NoError(t, err)
 		require.Len(t, list, 1)
 
-		err = s.Delete(context.TODO(), 2)
+		err = s.Delete(context.TODO(), []uint64{2})
 		require.NoError(t, err)
 		list, err = s.List(context.TODO(), storage.Params{})
 		require.NoError(t, err)
 		require.Len(t, list, 0)
 
-		require.NoError(t, s.Delete(context.TODO(), 1))
-		require.NoError(t, s.Delete(context.TODO(), 2))
+		require.NoError(t, s.Delete(context.TODO(), []uint64{1}))
+		require.NoError(t, s.Delete(context.TODO(), []uint64{2}))
+	})
+
+	t.Run("ListToSend", func(t *testing.T) {
+		id, err := s.Add(context.TODO(), storage.Event{
+			StartAt:    time.Now(),
+			SendBefore: 60,
+		})
+		require.NoError(t, err)
+
+		events, err := s.ListToSend(context.TODO())
+		require.NoError(t, err)
+		require.Len(t, events, 1)
+		require.Equal(t, id, events[0].ID)
+	})
+
+	t.Run("SetSent", func(t *testing.T) {
+		err := s.SetSent(context.TODO(), []uint64{100})
+		require.NoError(t, err)
+
+		events, err := s.List(context.TODO(), storage.Params{})
+		require.NoError(t, err)
+		require.Len(t, events, 1)
+		require.False(t, events[0].IsSent)
+
+		err = s.SetSent(context.TODO(), []uint64{events[0].ID})
+		require.NoError(t, err)
+
+		events, err = s.List(context.TODO(), storage.Params{})
+		require.NoError(t, err)
+		require.Len(t, events, 1)
+		require.True(t, events[0].IsSent)
 	})
 }

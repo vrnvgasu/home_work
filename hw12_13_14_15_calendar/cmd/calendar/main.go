@@ -20,7 +20,7 @@ import (
 var configFile string
 
 func init() {
-	flag.StringVar(&configFile, "config", "configs/config-dev.yml", "Path to configuration file")
+	flag.StringVar(&configFile, "config", "configs/calendar_config-dev.yml", "Path to configuration file")
 }
 
 func main() {
@@ -59,7 +59,6 @@ func main() {
 	calendar := app.New(logg, storage)
 
 	server := internalhttp.NewServer(logg, calendar)
-	// TODO поменять на calendar (передаем app)
 	grpcServer := internalgrpc.NewServer(logg, calendar)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),

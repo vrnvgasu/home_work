@@ -10,4 +10,5 @@ type Event struct {
 	Description string    `db:"description"`
 	OwnerID     uint64    `db:"owner_id"`
 	SendBefore  int64     `db:"send_before"`
+	IsSent      bool      `db:"is_sent"`
 }

@@ -3,9 +3,10 @@ package app
 import (
 	"context"
 
-	"github.com/vrnvgasu/home_work/hw12_13_14_15_calendar/internal/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/vrnvgasu/home_work/hw12_13_14_15_calendar/internal/storage"
 )
 
 type App struct {
@@ -61,4 +62,32 @@ func (a *App) EventList(ctx context.Context, params storage.Params) ([]storage.E
 	}
 
 	return events, nil
+}
+
+func (a *App) DeleteEventList(ctx context.Context, eventIDs []uint64) error {
+	if err := a.storage.Delete(ctx, eventIDs); err != nil {
+		a.l.Error(err.Error())
+		return status.Errorf(codes.Internal, "app DeleteEventList Delete failed")
+	}
+
+	return nil
+}
+
+func (a *App) EventListToSend(ctx context.Context) ([]storage.Event, error) {
+	events, err := a.storage.ListToSend(ctx)
+	if err != nil {
+		a.l.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "app EventListToSend List failed")
+	}
+
+	return events, nil
+}
+
+func (a *App) SetEventsSent(ctx context.Context, eventIDs []uint64) error {
+	if err := a.storage.SetSent(ctx, eventIDs); err != nil {
+		a.l.Error(err.Error())
+		return status.Errorf(codes.Internal, "app SetEventsSent SetSent failed")
+	}
+
+	return nil
 }
